@@ -14,48 +14,44 @@ mwa.lon = '116:40:14.93485'
 mwa.lat = '-26:42:11.94986'
 mwa.elevation = 377.827 #from sea level
 
+hdu1 = fits.open("test1-0553-image.fits")
+hdu2 = fits.open("test2-0553-image.fits")
+header = hdu2[0].header
+wcs = WCS(header, naxis=2)
+UTCtime = datetime.strptime(header['DATE-OBS'][:-2], '%Y-%m-%dT%H:%M:%S') +timedelta(seconds=0)
+mwa.date = UTCtime
+line1 = 'ALOS'
 
-number_of_lines_in_tle = sum(1 for line in open('tle.txt'))
+diff = hdu2[0].data[0,0,:,:] - hdu1[0].data[0,0,:,:]
+print(diff.shape)
 
-number_of_satellites = number_of_lines_in_tle/2
+#plt.figure().add_subplot(1,1,1, projection=wcs)
+plt.imshow(diff)
 
-
-print('The tle file has ' + str(number_of_lines_in_tle) + ' lines and ' + str(number_of_satellites) + ' satellites')
-
-
-with open('tle.txt') as f:
-
-	for i in range(116):
-		i+=1
-		hud1 = fits.open('1102603216-2m-t00' + str(i).zfill(2) + '-dirty.fits')
-	        hud2 = fits.open('1102603216-2m-t00' + str(i+1).zfill(2) + '-dirty.fits')
-	        header = hud2[0].header
-	        wcs = WCS(header, naxis=2)
-	        UTCtime = datetime.strptime(header['DATE-OBS'][:-2], '%Y-%m-%dT%H:%M:%S') +timedelta(seconds=7)
-	        mwa.date = UTCtime
-
-		tleLineNo = 0
-		tleLine1 = 'sat'
-	
-		for SatNo in range(number_of_satellites):
-			line2 = f.read().split('\n')[tleLineNo]
-			tleLineNo += 1
-			line3 = f.read().split('\n')[tleLineNo]
-			tleLineNo += 1
-			
-			sat.emphem.readtle(line1, line2, line3)
-			sat.compute(mwa)
-			x, y = wcs.all_world2pix([[np.degrees(sat.ra.real), np.degrees(sat.dec.real)]], 1)[0]
-
-			if (0 <= x < 10000) and (0 <= y < 10000):
-				plt.plot(x,y, marker='+', color'b')
-				print('sat' + str(SatNo) + ' is in the image ')
-			else:
-				print('sat' + str(SatNo) + 'is NOT in the image')
-
-		plt.savefig('all_sat_diff_image' + str(i) + '.png')
-		print('saving image ' + str(i) + '...')
-
-
-
-
+f = open('tle.txt')
+line = f.readline()
+counter = 1
+while line:
+    #print(line)
+    
+    if counter%2 == 1:
+        line2 = line
+        #line2 = line2.replace("+", "")
+        #line2 = line2.replace("-", "")
+    else:
+        line3 = line
+        #line3 = line3.replace("+", "")
+        #line3 = line3.replace("-", "")
+        print(line1)
+        print(line2)
+        print(line3)
+        sat=ephem.readtle(str(line1), str(line2),str(line3))
+        sat.compute(mwa)
+        x, y = wcs.all_world2pix([[np.degrees(sat.ra.real), np.degrees(sat.dec.real)]], 1)[0]
+        if (0 <= x < diff.shape[0]) and (0 <= y < diff.shape[1]):
+            plt.plot(x,y, marker='+', color='black')
+    print(counter)
+    counter+=1
+    line = f.readline()
+print(diff.shape)
+plt.show()
